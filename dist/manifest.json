@@ -1,0 +1,23 @@
+{
+  "name": "Таймер для медитации",
+  "short_name": "Медитация",
+  "description": "Таймер для медитации - простой способ следить за временем во время практики",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2D3250",
+  "theme_color": "#2D3250",
+  "icons": [
+    {
+      "src": "/meditation.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/meditation-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
