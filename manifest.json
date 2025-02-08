@@ -2,7 +2,7 @@
   "name": "Таймер для медитации",
   "short_name": "Медитация",
   "description": "Таймер для медитации - простой способ следить за временем во время практики",
-  "start_url": "/",
+  "start_url": "/meditation-timer/",
   "display": "standalone",
   "background_color": "#2D3250",
   "theme_color": "#2D3250",
