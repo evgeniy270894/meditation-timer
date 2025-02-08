@@ -3,6 +3,7 @@ import {
   getAudioSequenceForNumber,
   playAudioSequence,
 } from "../utils/numberToAudio";
+import { promiseLast } from "../utils/promiseLast";
 
 const TimerApp: React.FC = () => {
   // Состояния для ввода, оставшегося времени, общей длительности, режима работы и старта таймера
@@ -66,25 +67,25 @@ const TimerApp: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     const tick = async () => {
-      if (!isRunningRef.current || timeLeftRef.current <= 0 || cancelled)
+      if (!isRunningRef.current || timeLeftRef.current <= 0 || cancelled) {
+        handleReset();
         return;
+      }
 
       // Сначала получаем и воспроизводим аудио для текущего значения
       const currentTimeLeft = timeLeftRef.current;
       const audioFiles = getAudioSequenceForNumber(currentTimeLeft);
-      await playAudioSequence(audioFiles);
-
-      // Затем ждем секунду
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await promiseLast([
+        playAudioSequence(audioFiles),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+      ]);
 
       if (!isRunningRef.current || cancelled) return;
 
       // И только потом уменьшаем значение таймера
-      setTimeLeft((prev) => {
-        const newTime = prev - 1;
-        timeLeftRef.current = newTime;
-        return newTime;
-      });
+      timeLeftRef.current = timeLeftRef.current - 1;
+
+      setTimeLeft((prev) => prev - 1);
 
       if (cancelled) return;
       tick();
@@ -214,7 +215,7 @@ const TimerApp: React.FC = () => {
         )}
       </div>
       <button onClick={toggleFullscreen} style={styles.fullscreenButton}>
-        {isFullscreen ? "⤓" : "⤢"}
+        {isFullscreen ? "⛶" : "⛶"}
       </button>
     </div>
   );
@@ -325,7 +326,7 @@ const styles = {
     borderRadius: "8px",
     backgroundColor: "rgba(156, 136, 255, 0.3)",
     color: "#F5F6FA",
-    border: "1px solid rgba(156, 136, 255, 0.5)",
+    border: "none",
     cursor: "pointer",
     fontSize: "20px",
     display: "flex",

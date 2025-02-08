@@ -59,6 +59,40 @@ export const PHRASES: Phrase[] = [
   { text: "тысяч", fileName: "thousand_tysyach" },
 ];
 
+// Добавляем кэш для предзагруженных аудиофайлов
+const audioCache: Map<string, HTMLAudioElement> = new Map();
+
+/**
+ * Предзагружает все аудиофайлы и сохраняет их в кэше
+ */
+export async function preloadAudioFiles(): Promise<void> {
+  const loadPromises = PHRASES.map((phrase) => {
+    return new Promise<void>((resolve) => {
+      const audioPath = `${
+        import.meta.env.PROD ? "/meditation-timer" : ""
+      }/audio/${phrase.fileName}.mp3`;
+
+      const audio = new Audio(audioPath);
+
+      audio.addEventListener("canplaythrough", () => {
+        audioCache.set(phrase.fileName, audio);
+        resolve();
+      });
+
+      audio.addEventListener("error", () => {
+        console.error(`Ошибка при предзагрузке файла ${phrase.fileName}.mp3`);
+        resolve();
+      });
+
+      // Начинаем загрузку
+      audio.load();
+    });
+  });
+
+  await Promise.all(loadPromises);
+  console.log("Все аудиофайлы предзагружены");
+}
+
 /**
  * Формирует последовательность имён аудиофайлов для воспроизведения числа.
  * Число разбивается на тысячи, сотни, десятки и единицы с учётом правил произношения.
@@ -175,27 +209,48 @@ export function playAudioSequence(audioFiles: string[]): Promise<void> {
   }, Promise.resolve());
 }
 
-/**
- * Вспомогательная функция для воспроизведения одного аудиофайла.
- *
- * @param fileName Имя файла (без расширения .mp3)
- * @returns Promise, резолвящаяся по окончании воспроизведения (или в случае ошибки)
- */
+// Обновляем функцию playSingleAudio для использования кэша
 function playSingleAudio(fileName: string): Promise<void> {
   return new Promise((resolve) => {
-    const audio = new Audio(`/audio/${fileName}.mp3`);
-    audio.addEventListener("ended", () => {
-      setTimeout(() => {
+    const cachedAudio = audioCache.get(fileName);
+
+    if (cachedAudio) {
+      // Используем предзагруженный файл
+      cachedAudio.currentTime = 0; // Сбрасываем позицию воспроизведения
+
+      const onEnded = () => {
+        setTimeout(() => {
+          resolve();
+        }, 200);
+        cachedAudio.removeEventListener("ended", onEnded);
+      };
+
+      cachedAudio.addEventListener("ended", onEnded);
+
+      cachedAudio.play().catch((err) => {
+        console.error(`Не удалось воспроизвести ${fileName}.mp3`, err);
         resolve();
-      }, 200);
-    });
-    audio.addEventListener("error", (e) => {
-      console.error(`Ошибка при воспроизведении файла ${fileName}.mp3`, e);
-      resolve();
-    });
-    audio.play().catch((err) => {
-      console.error(`Не удалось воспроизвести ${fileName}.mp3`, err);
-      resolve();
-    });
+      });
+    } else {
+      // Fallback на старое поведение, если файл не был предзагружен
+      const audioPath = `${
+        import.meta.env.PROD ? "/meditation-timer" : ""
+      }/audio/${fileName}.mp3`;
+      const audio = new Audio(audioPath);
+
+      audio.addEventListener("ended", () => {
+        resolve();
+      });
+
+      audio.addEventListener("error", (e) => {
+        console.error(`Ошибка при воспроизведении файла ${fileName}.mp3`, e);
+        resolve();
+      });
+
+      audio.play().catch((err) => {
+        console.error(`Не удалось воспроизвести ${fileName}.mp3`, err);
+        resolve();
+      });
+    }
   });
 }
